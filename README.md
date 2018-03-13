@@ -6,3 +6,5 @@
 mvn clean install
 mvn clean package
 
+# For deployment
+# copy the genetated console.war to tomcat webapps folder, and start the tomcat
