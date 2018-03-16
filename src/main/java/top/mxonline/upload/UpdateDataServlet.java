@@ -11,6 +11,8 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -32,6 +34,7 @@ public class UpdateDataServlet extends HttpServlet {
 	private static final String ERR_CODE2 = "0x002";
 	private static final String ERR_CODE3 = "0x003";
 	private static final String PROPERTY_PATH = "C:/property/update.properties";
+	private static final Logger logger = Logger.getLogger(UpdateDataServlet.class.getName());
 	private String formatSourcePath;
 	private String formatSourceFileName;
 	private String formatResultPath;
@@ -57,7 +60,7 @@ public class UpdateDataServlet extends HttpServlet {
 		if (success) {
 			SolrClient  solrClient = getSolrClient(solrServerUrl, solrCore);
 			solrClient.deleteByQuery("*:*");
-			URL indexingUrl = new URL("http://localhost:8080/solr/demo/update/csv?commit=true&stream.file=" + indexSourceFile + "&stream.contentType=text/plain;charset=UTF-8");
+			URL indexingUrl = new URL(solrServerUrl + "/" +solrCore + "/update/csv?commit=true&stream.file=" + indexSourceFile + "&stream.contentType=text/plain;charset=UTF-8");
 			HttpURLConnection urlConnection = (HttpURLConnection) indexingUrl.openConnection();
 			urlConnection.connect();
 			InputStream is = urlConnection.getInputStream();
@@ -69,6 +72,7 @@ public class UpdateDataServlet extends HttpServlet {
 	        }
 	        if (bs.toString().contains("Exception")){
 	        	pw.write("建立索引失败，错误代码：" + ERR_CODE1);
+	        	logger.log(Level.SEVERE, "建立索引失败，错误代码：" + ERR_CODE1 +",SOLR内部错误，详细错误信息：" + bs.toString());
 	            pw.flush();	
 	        } else {
 	        	pw.write("一键更新成功");
@@ -78,15 +82,18 @@ public class UpdateDataServlet extends HttpServlet {
 			
 		} else {
 			pw.write("格式化失败，错误代码：" + ERR_CODE1);
+			logger.log(Level.SEVERE,"格式化失败，错误代码：" + ERR_CODE1 + ",XLSX格式转换时发生错误");
 			pw.flush();
 		}
 
 		} catch (SolrServerException e) {
-			pw.write("清除索引失败，错误代码：" + ERR_CODE3);
+			pw.write("清除索引失败，错误代码：" + ERR_CODE2);
+			logger.log(Level.SEVERE,"格式化失败，错误代码：" + ERR_CODE2 + ",SOLR服务器内部错误，详细错误信息" + e.getMessage());
 			pw.flush();
 			e.printStackTrace();
 		}catch (Exception e) {
-			pw.write("更新失败，错误代码：" + ERR_CODE2 );
+			pw.write("更新失败，错误代码：" + ERR_CODE3 );
+			logger.log(Level.SEVERE,"格式化失败，错误代码：" + ERR_CODE3 + ",详细错误信息" + e.getMessage());
 			e.printStackTrace();
 		} 
 
@@ -106,10 +113,10 @@ public class UpdateDataServlet extends HttpServlet {
 	        indexSourceFile = prop.getProperty("SOURCE_FILE");
 
 		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
+			logger.log(Level.SEVERE, "无法找到配置文件，详细错误信息：" + e.getMessage());
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			logger.log(Level.SEVERE, "读取属性文件时发生错误," + e.getMessage());
 			e.printStackTrace();
 		}
 	}

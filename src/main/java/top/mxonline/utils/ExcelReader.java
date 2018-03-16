@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.poi.hssf.usermodel.HSSFDateUtil;
 import org.apache.poi.openxml4j.opc.OPCPackage;
@@ -30,10 +32,11 @@ import org.xml.sax.helpers.XMLReaderFactory;
  * Excel超大数据读取，抽象Excel2007读取器，excel2007的底层数据结构是xml文件，采用SAX的事件驱动的方法解析
  * xml，需要继承DefaultHandler，在遇到文件内容时，事件会触发，这种做法可以大大降低 内存的耗费，特别使用于大数据量的文件。
  *
- * @version 2014-9-2
+ * @version 2018-3-16
  */
 public abstract class ExcelReader extends DefaultHandler {
 
+    private static final Logger logger = Logger.getLogger(ExcelReader.class.getName());
     // 共享字符串表
     private SharedStringsTable sst;
 
@@ -156,7 +159,9 @@ public abstract class ExcelReader extends DefaultHandler {
                 int idx = Integer.parseInt(lastContents);
                 lastContents = new XSSFRichTextString(sst.getEntryAt(idx)).toString();
             } catch (Exception e) {
-
+                //此处过多的log会影响服务器响应
+                //logger.log(Level.SEVERE, "读取单元格失败，详细错误信息：" + e.getMessage());
+                //e.printStackTrace();
             }
         }
         // t元素也包含字符串
@@ -183,7 +188,9 @@ public abstract class ExcelReader extends DefaultHandler {
                     value = bd.setScale(3, BigDecimal.ROUND_UP).toString();
                 }
             } catch (Exception e) {
-                // 转换失败仍用读出来的值
+                // 转换失败仍用读出来的值，此处过多的log会影响服务器响应
+                //logger.log(Level.SEVERE, "转换失败，详细错误信息：" + e.getMessage());
+                //e.printStackTrace();
             }
             rowList.add(curCol, value);
             curCol++;
@@ -238,6 +245,15 @@ public abstract class ExcelReader extends DefaultHandler {
                     if (rowList.size() == headerSize) {
                         for (int i = 0; i < rowList.size(); i++) {
                             String str = rowList.get(i);
+                            //为了防止原内容中本身包含\和|而导致csv格式以及转换后的json格式问题，将转义其为#
+                            if(str.contains("\\")){
+                                str = str.replaceAll("\\\\","#");
+                                logger.log(Level.WARNING, "已将第" + curRow + "行，第" + i + "单元格中元数据中\\替换为#");
+                            }
+                            if(str.contains("|")){
+                                str = str.replaceAll("\\|","#");
+                                logger.log(Level.WARNING, "已将第" + curRow + "行，第" + i + "单元格中元数据中|替换为#");
+                            }
                             sb.append(str).append("|");
                         }
                         sb.append("\n");
@@ -252,15 +268,15 @@ public abstract class ExcelReader extends DefaultHandler {
 
             pw.close();
         } catch (UnsupportedEncodingException | FileNotFoundException e) {
-            // TODO Auto-generated catch block
+            logger.log(Level.SEVERE, "详细错误信息：" + e.getMessage());
             e.printStackTrace();
             return false;
         } catch (IOException e) {
-            // TODO Auto-generated catch block
+            logger.log(Level.SEVERE, "详细错误信息：" + e.getMessage());
             e.printStackTrace();
             return false;
         } catch (Exception e) {
-            // TODO Auto-generated catch block
+            logger.log(Level.SEVERE, "详细错误信息：" + e.getMessage());
             e.printStackTrace();
             return false;
         }

@@ -35,7 +35,7 @@ public class UploadServlet extends HttpServlet {
 	private static final String ERR_CODE_1 = "0x001";
 	private static final String ERR_CODE_2 = "0x002";
 	private static final long serialVersionUID = 1L;
-	private static final Logger logger = Logger.getLogger("UploadServlet");
+	private static final Logger logger = Logger.getLogger(UploadServlet.class.getName());
 	private static final String PROPERTY_PATH = "C:/property/uploader.properties";
 	private String savePath;
 	private String fileName;
