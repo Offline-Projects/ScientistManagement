@@ -237,6 +237,8 @@ public abstract class ExcelReader extends DefaultHandler {
             OutputStreamWriter pw = new OutputStreamWriter(new FileOutputStream(csv), "UTF-8");
             ExcelReader reader = new ExcelReader() {
                 public void getRows(int sheetIndex, int curRow, List<String> rowList) {
+                    StringBuilder rowSb = new StringBuilder();
+                    int count = 0;
                     //如果是第一行标题行，则静态初始化列数。
                     if (curRow == 0) {
                         headerSize = rowList.size();
@@ -254,9 +256,18 @@ public abstract class ExcelReader extends DefaultHandler {
                                 str = str.replaceAll("\\|","#");
                                 logger.log(Level.WARNING, "已将第" + curRow + "行，第" + i + "单元格中元数据中|替换为#");
                             }
-                            sb.append(str).append("|");
+                            if(str != null && !str.equalsIgnoreCase("#N/A") && !str.equalsIgnoreCase("")){
+                                rowSb.append(str).append("|");
+                                count ++;
+                            } else {
+                                logger.log(Level.WARNING, "已将第" + curRow + "行数据移除，因该行第" + i + "单元格中元数据中为空或#N/A，不符合要求。");
+                                continue;
+                            }
+
                         }
-                        sb.append("\n");
+                        if(count >= rowList.size()) {
+                            sb.append(rowSb).append("\n");
+                        }
                     }
                 }
             };
